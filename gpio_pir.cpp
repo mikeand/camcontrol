@@ -94,6 +94,7 @@ void detectLoop() {
             enabled = isEnabled();
             checkEnabledTime = 0;
         }
+        checkEnabledTime += DELAY_MS;
     }
     fprintf(stderr, "No longer enabled, shutting down.\n");
 }
