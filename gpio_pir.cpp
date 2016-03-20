@@ -20,11 +20,11 @@ const char* ENABLE_FILE = "/usr/local/bin/pir_enable";
 void outputLatch(bool status) {
     
     if (status) {
-        printf("PIR detected movement\n");
+        fprintf(stderr, "PIR detected movement\n");
 	FILE* lock = fopen(OUT_FILE, "w");
         fclose(lock);
     } else {
-        printf("Movement not detected for %d seconds, resuming detection.\n", LATCH_TIME);
+        fprintf(stderr, "Movement not detected for %d seconds, resuming detection.\n", LATCH_TIME);
         remove(OUT_FILE);
     }
 }
@@ -33,7 +33,7 @@ void blinkLedStartup() {
     int blinkingMs = 0;
     int ledOnOff = 0;
 
-    printf("Blinking for %d seconds not detecting\n", LED_BLINK_SECONDS);
+    fprintf(stderr, "Blinking for %d seconds not detecting\n", LED_BLINK_SECONDS);
     
     // Blink for a specific number of seconds
     while (blinkingMs < LED_BLINK_SECONDS * 1000) {
@@ -63,7 +63,7 @@ void detectLoop() {
 
     blinkLedStartup();
 
-    printf("Starting detection\n");
+    fprintf(stderr, "Starting detection\n");
 
     while (enabled) {
         int pirStatus = digitalRead(PIN_PIR);
@@ -95,6 +95,7 @@ void detectLoop() {
             checkEnabledTime = 0;
         }
     }
+    fprintf(stderr, "No longer enabled, shutting down.\n");
 }
 
 
@@ -105,7 +106,7 @@ void detectLoop() {
 int main() {
     bool enabled = isEnabled();
 
-    printf("Raspberry Pi Pir Checker\n");
+    fprintf(stderr, "Raspberry Pi Pir Checker\n");
 
     if (wiringPiSetup() == -1) {
         fprintf(stderr, "Cannot setup GPIO\n");
@@ -116,9 +117,12 @@ int main() {
     pinMode(PIN_LED, OUTPUT);
 
     while (true) {
-        if (enabled) {
+        if (!enabled) {
             enabled = isEnabled();
             delay(1000 * CHECK_ENABLED);
+            if (enabled) {
+                fprintf(stderr, "Now enabled, starting up...\n");
+            }
         } else {
             detectLoop();
         }
