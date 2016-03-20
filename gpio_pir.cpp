@@ -126,6 +126,7 @@ int main() {
             }
         } else {
             detectLoop();
+            enabled = false;
         }
     }
 }
