@@ -2,7 +2,6 @@
 from datetime import datetime
 
 import picamera
-import RPi.GPIO as GPIO
 import io
 import os
 import logging
@@ -11,17 +10,12 @@ import time
 MODE_SLEEP = 0
 MODE_SEEK = 1
 MODE_RECORD = 2
-MOBILE_IP = '10.1.1.6'
-PIR_IN = 7
-SLEEP_SECONDS = 300
-PING_SECONDS = 30
-LED_OUT = 11
+SLEEP_SECONDS = 10
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(PIR_IN, GPIO.IN)
-GPIO.setup(LED_OUT, GPIO.OUT)
+OUTPUT_PATH = '/home/michael/Sync/HomeCam'
+PIR_DETECT = '/usr/local/bin/pir'
+PIR_ENABLED = '/usr/local/bin/pir_enabled'
 
-OUTPUT_PATH='/home/michael/Sync/HomeCam'
 
 class CameraControl:
 
@@ -37,10 +31,16 @@ class CameraControl:
         if self.current_mode == MODE_SLEEP:
             self.perform_sleep()
 
+    def is_pir_detected(self):
+        if self.current_mode == MODE_SEEK:
+            return os.path.isfile(PIR_DETECT)
+        return False
+
+    def is_camera_enabled(self):
+        return os.path.isfile(PIR_ENABLED)
+
     def perform_seek(self):
         seconds = 0
-        blink = 0
-        total_seconds = 0
 
         with picamera.PiCamera() as camera:
             camera.resolution = (1280, 720)
@@ -53,23 +53,17 @@ class CameraControl:
             try:
                 while self.current_mode == MODE_SEEK:
                     camera.wait_recording(1)
-                    if GPIO.input(PIR_IN):
+                    seconds += 1
+
+                    if self.is_pir_detected():
                         logging.info("IR Detected, Capturing +10 Seconds")
                         camera.wait_recording(10)
                         self.write_video(stream)
                         self.current_mode = MODE_RECORD
-                    elif seconds < PING_SECONDS:
-                         seconds += 1
-                         total_seconds += 1
-                         blink = 1 - blink
-                         if total_seconds > 200: 
-                             blink = 0
-                         GPIO.output(LED_OUT, blink)
-                    elif self.check_mobile_is_here():
-                        logging.info("Mobile phone found, going into sleep")
-                        self.current_mode = MODE_SLEEP
-                    else:
+                    elif seconds > SLEEP_SECONDS:
                         seconds = 0
+                        if not self.is_camera_enabled():
+                            self.current_mode = MODE_SLEEP
             finally:
                 camera.stop_recording()
 
@@ -105,16 +99,11 @@ class CameraControl:
 
         self.current_mode = MODE_RECORD
 
-    def check_mobile_is_here(self):
-        response = os.system("ping -c 1 -w2 " + MOBILE_IP + " > /dev/null 2>&1")
-        return response == 0
-
     def perform_sleep(self):
-        if self.check_mobile_is_here():
-            logging.info("Currently sleeping, mobile found")
+        if not self.is_camera_enabled():
             time.sleep(SLEEP_SECONDS)
         else:
-            logging.info("Mobile missing, switching to seek mode")
+            logging.info("PIR enabled, switching to seek mode")
             self.current_mode = MODE_SEEK
 
 if __name__ == '__main__':
