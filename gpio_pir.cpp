@@ -10,9 +10,11 @@ const int PIN_PIR = 7;          // The pin the PIR sensor is attached.
 const int PIN_LED = 0;          // The pin the LED output is attached.
 const int LATCH_TIME = 30;      // Keep true reading for this many seconds
 const int DELAY_MS = 100;       // Number of milliseconds inbetween each  read.
+const int CHECK_ENABLED = 5;    // Check if enabled this many seconds
 const int LED_BLINK_SECONDS = 60;   // Blink for this many seconds when starting
 const int LED_BLINK_WAIT = 500;     // Blink every 500ms
 const char* OUT_FILE = "/usr/local/bin/pir";
+const char* ENABLE_FILE = "/usr/local/bin/pir_enable";
 
 
 void outputLatch(bool status) {
@@ -44,10 +46,64 @@ void blinkLedStartup() {
     digitalWrite(PIN_LED, 0);
 }
 
+bool isEnabled() {
+    FILE *fileNo = fopen(ENABLE_FILE, "r");
+    if (fileNo) {
+        fclose(fileNo);
+    }
+    return fileNo != NULL;
+}
 
-int main() {
+
+void detectLoop() {
     int latchTime = 0;
+    int checkEnabledTime = 0;
     bool latchStatus = false;
+    bool enabled = true;
+
+    blinkLedStartup();
+
+    printf("Starting detection\n");
+
+    while (enabled) {
+        int pirStatus = digitalRead(PIN_PIR);
+        delay(DELAY_MS);
+
+        // PIR has been activated
+        if (pirStatus != 0) {
+            latchTime = 0;
+
+            if (!latchStatus) {
+                latchStatus = true;
+                outputLatch(true);
+            }
+        }
+
+        // When latched it stays latched for a number
+        // of seconds before resetting back.
+        if (latchStatus) {
+            latchTime += DELAY_MS;
+        if (latchTime >= 1000 * LATCH_TIME) {
+            latchStatus = false;
+            outputLatch(false);
+            }
+        }
+
+        // Check enabled only after time has passed.
+        if (checkEnabledTime >= 1000 * CHECK_ENABLED) {
+            enabled = isEnabled();
+            checkEnabledTime = 0;
+        }
+    }
+}
+
+
+
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
+int main() {
+    bool enabled = isEnabled();
 
     printf("Raspberry Pi Pir Checker\n");
 
@@ -59,35 +115,13 @@ int main() {
     pinMode(PIN_PIR, INPUT);
     pinMode(PIN_LED, OUTPUT);
 
-    blinkLedStartup();
-
-    printf("Starting detection\n");
-
-    while (latchTime >= 0) {
-        int pirStatus = digitalRead(PIN_PIR);
-        delay(DELAY_MS);
-
-        // PIR has been activated
-        if (pirStatus != 0) {
-            latchTime = 0;
-            if (!latchStatus) {
-                latchStatus = true;
-                outputLatch(true);
-            }
-        }
-
-	// When latched it stays latched for a number
-        // of seconds before resetting back.
-        if (latchStatus) {
-            latchTime += DELAY_MS;
-            if (latchTime >= 1000 * LATCH_TIME) {
-                latchStatus = false;
-                outputLatch(false);
-            }
+    while (true) {
+        if (enabled) {
+            enabled = isEnabled();
+            delay(1000 * CHECK_ENABLED);
+        } else {
+            detectLoop();
         }
     }
-
-    return 0;
 }
-
-
+#pragma clang diagnostic pop
