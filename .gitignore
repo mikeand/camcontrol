@@ -33,3 +33,6 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 gpio_pir
+
+# python temp files
+*.pyc
