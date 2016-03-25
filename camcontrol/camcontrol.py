@@ -13,8 +13,8 @@ MODE_RECORD = 2
 SLEEP_SECONDS = 10
 
 OUTPUT_PATH = '/home/michael/Sync/HomeCam'
-PIR_DETECT = '/usr/local/bin/pir'
-PIR_ENABLED = '/usr/local/bin/pir_enable'
+PIR_DETECT = '/tmp/pir'
+PIR_ENABLED = '/tmp/pir_enable'
 
 
 class CameraControl:

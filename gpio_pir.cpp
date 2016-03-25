@@ -13,8 +13,8 @@ const int DELAY_MS = 100;       // Number of milliseconds inbetween each  read.
 const int CHECK_ENABLED = 5;    // Check if enabled this many seconds
 const int LED_BLINK_SECONDS = 60;   // Blink for this many seconds when starting
 const int LED_BLINK_WAIT = 500;     // Blink every 500ms
-const char* OUT_FILE = "/usr/local/bin/pir";
-const char* ENABLE_FILE = "/usr/local/bin/pir_enable";
+const char* OUT_FILE = "/tmp/pir";
+const char* ENABLE_FILE = "/tmp/pir_enable";
 
 
 void outputLatch(bool status) {
