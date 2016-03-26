@@ -36,3 +36,6 @@ gpio_pir
 
 # python temp files
 *.pyc
+
+# ide files
+*.idea
